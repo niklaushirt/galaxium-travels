@@ -119,13 +119,13 @@ Response:
 ### Get Quote
 
 ```bash
-curl http://localhost:8080/api/v1/quotes/Q-2026-000001
+curl -H "X-Traveler-Id: 1" http://localhost:8080/api/v1/quotes/Q-2026-000001
 ```
 
 ### Create Hold
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/quotes/Q-2026-000001/holds
+curl -X POST -H "X-Traveler-Id: 1" http://localhost:8080/api/v1/quotes/Q-2026-000001/holds
 ```
 
 Response:
@@ -145,7 +145,7 @@ Response:
 ### Get Hold
 
 ```bash
-curl http://localhost:8080/api/v1/holds/H-2026-000001
+curl -H "X-Traveler-Id: 1" http://localhost:8080/api/v1/holds/H-2026-000001
 ```
 
 ### Confirm Hold
@@ -153,7 +153,7 @@ curl http://localhost:8080/api/v1/holds/H-2026-000001
 Creates a booking in the Python backend and updates the hold:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/holds/H-2026-000001/confirm
+curl -X POST -H "X-Traveler-Id: 1" http://localhost:8080/api/v1/holds/H-2026-000001/confirm
 ```
 
 Response:
@@ -175,7 +175,7 @@ Response:
 Manually release a hold before expiration:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/holds/H-2026-000001/release
+curl -X POST -H "X-Traveler-Id: 1" http://localhost:8080/api/v1/holds/H-2026-000001/release
 ```
 
 ## Complete Demo Flow
@@ -196,12 +196,12 @@ QUOTE_ID=$(echo $QUOTE_RESPONSE | jq -r '.quoteId')
 echo "Created quote: $QUOTE_ID"
 
 # 2. Create a hold from the quote
-HOLD_RESPONSE=$(curl -s -X POST http://localhost:8080/api/v1/quotes/$QUOTE_ID/holds)
+HOLD_RESPONSE=$(curl -s -X POST -H "X-Traveler-Id: 1" http://localhost:8080/api/v1/quotes/$QUOTE_ID/holds)
 HOLD_ID=$(echo $HOLD_RESPONSE | jq -r '.holdId')
 echo "Created hold: $HOLD_ID"
 
 # 3. Confirm the hold (creates booking in Python backend)
-curl -X POST http://localhost:8080/api/v1/holds/$HOLD_ID/confirm
+curl -X POST -H "X-Traveler-Id: 1" http://localhost:8080/api/v1/holds/$HOLD_ID/confirm
 
 # 4. Verify the booking was created in Python backend
 curl http://localhost:8000/api/bookings/1

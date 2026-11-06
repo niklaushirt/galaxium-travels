@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.Year;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -33,11 +34,12 @@ public class HoldService {
     private int holdDurationMinutes;
 
     @Transactional
-    public Hold createHold(String quoteId) {
+    public Hold createHold(String quoteId, Integer travelerId) {
         log.info("Creating hold for quote {}", quoteId);
 
-        // Verify quote exists
+        // Verify quote exists and belongs to the caller
         Quote quote = quoteRepository.findById(quoteId)
+                .filter(q -> Objects.equals(q.getTravelerId(), travelerId))
                 .orElseThrow(() -> new IllegalArgumentException("Quote not found: " + quoteId));
 
         // Check if quote is expired
@@ -66,16 +68,23 @@ public class HoldService {
         return hold;
     }
 
+    /**
+     * Returns the hold only if its quote belongs to the given traveler. A hold owned by
+     * someone else is indistinguishable from a missing one to avoid ID enumeration.
+     */
     @Transactional(readOnly = true)
-    public Optional<Hold> getHold(String holdId) {
-        return holdRepository.findById(holdId);
+    public Optional<Hold> getHold(String holdId, Integer travelerId) {
+        return holdRepository.findById(holdId)
+                .filter(hold -> findOwnedQuote(hold, travelerId).isPresent());
     }
 
     @Transactional
-    public Hold confirmHold(String holdId) {
+    public Hold confirmHold(String holdId, Integer travelerId) {
         log.info("Confirming hold {}", holdId);
 
         Hold hold = holdRepository.findById(holdId)
+                .orElseThrow(() -> new IllegalArgumentException("Hold not found: " + holdId));
+        Quote quote = findOwnedQuote(hold, travelerId)
                 .orElseThrow(() -> new IllegalArgumentException("Hold not found: " + holdId));
 
         // Check if already confirmed
@@ -94,10 +103,6 @@ public class HoldService {
             holdRepository.save(hold);
             throw new IllegalStateException("Hold has expired");
         }
-
-        // Get quote details
-        Quote quote = quoteRepository.findById(hold.getQuoteId())
-                .orElseThrow(() -> new IllegalStateException("Quote not found: " + hold.getQuoteId()));
 
         try {
             // Call Python backend to create booking
@@ -135,10 +140,12 @@ public class HoldService {
     }
 
     @Transactional
-    public Hold releaseHold(String holdId) {
+    public Hold releaseHold(String holdId, Integer travelerId) {
         log.info("Releasing hold {}", holdId);
 
         Hold hold = holdRepository.findById(holdId)
+                .orElseThrow(() -> new IllegalArgumentException("Hold not found: " + holdId));
+        findOwnedQuote(hold, travelerId)
                 .orElseThrow(() -> new IllegalArgumentException("Hold not found: " + holdId));
 
         if (hold.getStatus() != Hold.HoldStatus.HELD) {
@@ -152,6 +159,11 @@ public class HoldService {
 
         log.info("Hold {} released successfully", holdId);
         return hold;
+    }
+
+    private Optional<Quote> findOwnedQuote(Hold hold, Integer travelerId) {
+        return quoteRepository.findById(hold.getQuoteId())
+                .filter(quote -> Objects.equals(quote.getTravelerId(), travelerId));
     }
 
     private String generateHoldId() {

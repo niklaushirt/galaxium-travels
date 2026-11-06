@@ -59,8 +59,13 @@ def create_quote(client, flight_id, traveler, seat_class="business", quantity=1)
     return quote
 
 
-def create_hold(client, quote_id):
-    r = client.post(f"/quotes/{quote_id}/holds")
+def traveler_headers(traveler):
+    """Identify the traveler to the hold service (quotes/holds are owner-only)."""
+    return {"X-Traveler-Id": str(traveler["user_id"])}
+
+
+def create_hold(client, quote_id, traveler):
+    r = client.post(f"/quotes/{quote_id}/holds", headers=traveler_headers(traveler))
     r.raise_for_status()
     hold = r.json()
     assert "holdId" in hold, f"hold creation failed: {hold}"

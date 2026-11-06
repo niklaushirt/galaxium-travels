@@ -170,32 +170,42 @@ export const createQuote = async (data: CreateQuoteRequest): Promise<Quote> => {
   return response.data as Quote;
 };
 
-export const getQuote = async (quoteId: string): Promise<Quote> => {
-  const response = await api.get(`/quotes/${quoteId}`);
+// Quotes and holds are only visible to the traveler that owns them, so every call
+// identifies the traveler via the X-Traveler-Id header.
+const travelerHeaders = (travelerId: number) => ({ 'X-Traveler-Id': String(travelerId) });
+
+export const getQuote = async (quoteId: string, travelerId: number): Promise<Quote> => {
+  const response = await api.get(`/quotes/${quoteId}`, { headers: travelerHeaders(travelerId) });
   assertNotProxyError(response.data);
   return response.data as Quote;
 };
 
-export const createHold = async (quoteId: string): Promise<Hold> => {
-  const response = await api.post(`/quotes/${quoteId}/holds`);
+export const createHold = async (quoteId: string, travelerId: number): Promise<Hold> => {
+  const response = await api.post(`/quotes/${quoteId}/holds`, undefined, {
+    headers: travelerHeaders(travelerId),
+  });
   assertNotProxyError(response.data);
   return response.data as Hold;
 };
 
-export const getHold = async (holdId: string): Promise<Hold> => {
-  const response = await api.get(`/holds/${holdId}`);
+export const getHold = async (holdId: string, travelerId: number): Promise<Hold> => {
+  const response = await api.get(`/holds/${holdId}`, { headers: travelerHeaders(travelerId) });
   assertNotProxyError(response.data);
   return response.data as Hold;
 };
 
-export const confirmHold = async (holdId: string): Promise<Hold> => {
-  const response = await api.post(`/holds/${holdId}/confirm`);
+export const confirmHold = async (holdId: string, travelerId: number): Promise<Hold> => {
+  const response = await api.post(`/holds/${holdId}/confirm`, undefined, {
+    headers: travelerHeaders(travelerId),
+  });
   assertNotProxyError(response.data);
   return response.data as Hold;
 };
 
-export const releaseHold = async (holdId: string): Promise<Hold> => {
-  const response = await api.post(`/holds/${holdId}/release`);
+export const releaseHold = async (holdId: string, travelerId: number): Promise<Hold> => {
+  const response = await api.post(`/holds/${holdId}/release`, undefined, {
+    headers: travelerHeaders(travelerId),
+  });
   assertNotProxyError(response.data);
   return response.data as Hold;
 };

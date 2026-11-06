@@ -26,9 +26,10 @@ public class QuoteController {
     }
 
     @GetMapping("/{quoteId}")
-    public ResponseEntity<Quote> getQuote(@PathVariable String quoteId) {
+    public ResponseEntity<Quote> getQuote(@PathVariable String quoteId,
+                                          @RequestHeader("X-Traveler-Id") Integer travelerId) {
         log.info("GET /api/v1/quotes/{} - Retrieving quote", quoteId);
-        return quoteService.getQuote(quoteId)
+        return quoteService.getQuote(quoteId, travelerId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

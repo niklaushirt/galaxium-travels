@@ -158,10 +158,10 @@ curl -X POST http://localhost:8080/api/v1/quotes \
   }'
 
 # 3. Create hold (use quote ID from step 2)
-curl -X POST http://localhost:8080/api/v1/quotes/Q-2026-000001/holds
+curl -X POST -H "X-Traveler-Id: 1" http://localhost:8080/api/v1/quotes/Q-2026-000001/holds
 
 # 4. Confirm hold (use hold ID from step 3)
-curl -X POST http://localhost:8080/api/v1/holds/H-2026-000001/confirm
+curl -X POST -H "X-Traveler-Id: 1" http://localhost:8080/api/v1/holds/H-2026-000001/confirm
 
 # 5. Verify booking in Python backend
 curl http://localhost:8000/api/bookings/1

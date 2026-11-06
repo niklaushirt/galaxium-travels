@@ -20,6 +20,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(HoldController.class)
 class HoldControllerTest {
 
+    private static final String TRAVELER_HEADER = "X-Traveler-Id";
+    private static final int OWNER_ID = 1;
+    private static final int OTHER_ID = 2;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -64,9 +68,9 @@ class HoldControllerTest {
 
     @Test
     void testPostHoldValid() throws Exception {
-        when(holdService.createHold("Q-2025-000001")).thenReturn(buildHeld());
+        when(holdService.createHold("Q-2025-000001", OWNER_ID)).thenReturn(buildHeld());
 
-        mockMvc.perform(post("/api/v1/quotes/Q-2025-000001/holds"))
+        mockMvc.perform(post("/api/v1/quotes/Q-2025-000001/holds").header(TRAVELER_HEADER, OWNER_ID))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.holdId").value("H-2025-000001"))
                 .andExpect(jsonPath("$.status").value("HELD"));
@@ -74,19 +78,34 @@ class HoldControllerTest {
 
     @Test
     void testPostHoldQuoteNotFound() throws Exception {
-        when(holdService.createHold("Q-MISSING"))
+        when(holdService.createHold("Q-MISSING", OWNER_ID))
                 .thenThrow(new IllegalArgumentException("Quote not found: Q-MISSING"));
 
-        mockMvc.perform(post("/api/v1/quotes/Q-MISSING/holds"))
+        mockMvc.perform(post("/api/v1/quotes/Q-MISSING/holds").header(TRAVELER_HEADER, OWNER_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testPostHoldQuoteOwnedByOtherTraveler() throws Exception {
+        when(holdService.createHold("Q-2025-000001", OTHER_ID))
+                .thenThrow(new IllegalArgumentException("Quote not found: Q-2025-000001"));
+
+        mockMvc.perform(post("/api/v1/quotes/Q-2025-000001/holds").header(TRAVELER_HEADER, OTHER_ID))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void testPostHoldExpiredQuote() throws Exception {
-        when(holdService.createHold("Q-EXPIRED"))
+        when(holdService.createHold("Q-EXPIRED", OWNER_ID))
                 .thenThrow(new IllegalStateException("Quote has expired"));
 
-        mockMvc.perform(post("/api/v1/quotes/Q-EXPIRED/holds"))
+        mockMvc.perform(post("/api/v1/quotes/Q-EXPIRED/holds").header(TRAVELER_HEADER, OWNER_ID))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testPostHoldMissingTravelerHeader() throws Exception {
+        mockMvc.perform(post("/api/v1/quotes/Q-2025-000001/holds"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -94,9 +113,9 @@ class HoldControllerTest {
 
     @Test
     void testGetHoldExists() throws Exception {
-        when(holdService.getHold("H-2025-000001")).thenReturn(Optional.of(buildHeld()));
+        when(holdService.getHold("H-2025-000001", OWNER_ID)).thenReturn(Optional.of(buildHeld()));
 
-        mockMvc.perform(get("/api/v1/holds/H-2025-000001"))
+        mockMvc.perform(get("/api/v1/holds/H-2025-000001").header(TRAVELER_HEADER, OWNER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.holdId").value("H-2025-000001"))
                 .andExpect(jsonPath("$.status").value("HELD"));
@@ -104,19 +123,33 @@ class HoldControllerTest {
 
     @Test
     void testGetHoldNotFound() throws Exception {
-        when(holdService.getHold("H-MISSING")).thenReturn(Optional.empty());
+        when(holdService.getHold("H-MISSING", OWNER_ID)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/v1/holds/H-MISSING"))
+        mockMvc.perform(get("/api/v1/holds/H-MISSING").header(TRAVELER_HEADER, OWNER_ID))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testGetHoldOwnedByOtherTraveler() throws Exception {
+        when(holdService.getHold("H-2025-000001", OTHER_ID)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/holds/H-2025-000001").header(TRAVELER_HEADER, OTHER_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testGetHoldMissingTravelerHeader() throws Exception {
+        mockMvc.perform(get("/api/v1/holds/H-2025-000001"))
+                .andExpect(status().isBadRequest());
     }
 
     // --- POST /api/v1/holds/{holdId}/confirm ---
 
     @Test
     void testPostConfirmHoldValid() throws Exception {
-        when(holdService.confirmHold("H-2025-000001")).thenReturn(buildConfirmed());
+        when(holdService.confirmHold("H-2025-000001", OWNER_ID)).thenReturn(buildConfirmed());
 
-        mockMvc.perform(post("/api/v1/holds/H-2025-000001/confirm"))
+        mockMvc.perform(post("/api/v1/holds/H-2025-000001/confirm").header(TRAVELER_HEADER, OWNER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CONFIRMED"))
                 .andExpect(jsonPath("$.externalBookingReference").value("BK-999"));
@@ -124,19 +157,28 @@ class HoldControllerTest {
 
     @Test
     void testPostConfirmHoldNotFound() throws Exception {
-        when(holdService.confirmHold("H-MISSING"))
+        when(holdService.confirmHold("H-MISSING", OWNER_ID))
                 .thenThrow(new IllegalArgumentException("Hold not found: H-MISSING"));
 
-        mockMvc.perform(post("/api/v1/holds/H-MISSING/confirm"))
+        mockMvc.perform(post("/api/v1/holds/H-MISSING/confirm").header(TRAVELER_HEADER, OWNER_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testPostConfirmHoldOwnedByOtherTraveler() throws Exception {
+        when(holdService.confirmHold("H-2025-000001", OTHER_ID))
+                .thenThrow(new IllegalArgumentException("Hold not found: H-2025-000001"));
+
+        mockMvc.perform(post("/api/v1/holds/H-2025-000001/confirm").header(TRAVELER_HEADER, OTHER_ID))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void testPostConfirmHoldInvalidStatus() throws Exception {
-        when(holdService.confirmHold("H-2025-000001"))
+        when(holdService.confirmHold("H-2025-000001", OWNER_ID))
                 .thenThrow(new IllegalStateException("Hold is not in HELD status: RELEASED"));
 
-        mockMvc.perform(post("/api/v1/holds/H-2025-000001/confirm"))
+        mockMvc.perform(post("/api/v1/holds/H-2025-000001/confirm").header(TRAVELER_HEADER, OWNER_ID))
                 .andExpect(status().isBadRequest());
     }
 
@@ -144,19 +186,28 @@ class HoldControllerTest {
 
     @Test
     void testPostReleaseHoldValid() throws Exception {
-        when(holdService.releaseHold("H-2025-000001")).thenReturn(buildReleased());
+        when(holdService.releaseHold("H-2025-000001", OWNER_ID)).thenReturn(buildReleased());
 
-        mockMvc.perform(post("/api/v1/holds/H-2025-000001/release"))
+        mockMvc.perform(post("/api/v1/holds/H-2025-000001/release").header(TRAVELER_HEADER, OWNER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RELEASED"));
     }
 
     @Test
+    void testPostReleaseHoldOwnedByOtherTraveler() throws Exception {
+        when(holdService.releaseHold("H-2025-000001", OTHER_ID))
+                .thenThrow(new IllegalArgumentException("Hold not found: H-2025-000001"));
+
+        mockMvc.perform(post("/api/v1/holds/H-2025-000001/release").header(TRAVELER_HEADER, OTHER_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void testPostReleaseHoldInvalidStatus() throws Exception {
-        when(holdService.releaseHold("H-2025-000001"))
+        when(holdService.releaseHold("H-2025-000001", OWNER_ID))
                 .thenThrow(new IllegalStateException("Hold cannot be released, current status: CONFIRMED"));
 
-        mockMvc.perform(post("/api/v1/holds/H-2025-000001/release"))
+        mockMvc.perform(post("/api/v1/holds/H-2025-000001/release").header(TRAVELER_HEADER, OWNER_ID))
                 .andExpect(status().isBadRequest());
     }
 }

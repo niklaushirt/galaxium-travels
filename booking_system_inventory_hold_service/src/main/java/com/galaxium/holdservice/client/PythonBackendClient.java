@@ -20,7 +20,10 @@ import java.util.Map;
 public class PythonBackendClient {
 
     private final ObjectMapper objectMapper;
+    // Force HTTP/1.1: the default client attempts an h2c upgrade, which the Python
+    // server (uvicorn/h11) does not support, causing the request body to be dropped.
     private final HttpClient httpClient = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
