@@ -40,7 +40,7 @@ export const MyBookings = () => {
     await Promise.all(
       stored.map(async (sh) => {
         try {
-          const hold = await getHold(sh.holdId);
+          const hold = await getHold(sh.holdId, user.user_id);
           if (hold.status === 'HELD' && !isLocallyExpired(sh)) {
             stillActive.push(sh);
           } else {

@@ -113,18 +113,32 @@ class QuoteControllerTest {
     @Test
     void testGetQuoteExists() throws Exception {
         Quote quote = buildQuote();
-        when(quoteService.getQuote("Q-2025-000001")).thenReturn(Optional.of(quote));
+        when(quoteService.getQuote("Q-2025-000001", 1)).thenReturn(Optional.of(quote));
 
-        mockMvc.perform(get("/api/v1/quotes/Q-2025-000001"))
+        mockMvc.perform(get("/api/v1/quotes/Q-2025-000001").header("X-Traveler-Id", 1))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.quoteId").value("Q-2025-000001"));
     }
 
     @Test
     void testGetQuoteNotFound() throws Exception {
-        when(quoteService.getQuote("Q-MISSING")).thenReturn(Optional.empty());
+        when(quoteService.getQuote("Q-MISSING", 1)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/v1/quotes/Q-MISSING"))
+        mockMvc.perform(get("/api/v1/quotes/Q-MISSING").header("X-Traveler-Id", 1))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testGetQuoteOwnedByOtherTraveler() throws Exception {
+        when(quoteService.getQuote("Q-2025-000001", 2)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/quotes/Q-2025-000001").header("X-Traveler-Id", 2))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testGetQuoteMissingTravelerHeader() throws Exception {
+        mockMvc.perform(get("/api/v1/quotes/Q-2025-000001"))
+                .andExpect(status().isBadRequest());
     }
 }

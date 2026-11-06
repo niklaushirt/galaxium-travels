@@ -14,13 +14,16 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class HoldController {
 
+    static final String TRAVELER_ID_HEADER = "X-Traveler-Id";
+
     private final HoldService holdService;
 
     @PostMapping("/quotes/{quoteId}/holds")
-    public ResponseEntity<Hold> createHold(@PathVariable String quoteId) {
+    public ResponseEntity<Hold> createHold(@PathVariable String quoteId,
+                                           @RequestHeader(TRAVELER_ID_HEADER) Integer travelerId) {
         log.info("POST /api/v1/quotes/{}/holds - Creating hold", quoteId);
         try {
-            Hold hold = holdService.createHold(quoteId);
+            Hold hold = holdService.createHold(quoteId, travelerId);
             return ResponseEntity.status(HttpStatus.CREATED).body(hold);
         } catch (IllegalArgumentException e) {
             log.error("Invalid quote ID: {}", quoteId, e);
@@ -32,18 +35,20 @@ public class HoldController {
     }
 
     @GetMapping("/holds/{holdId}")
-    public ResponseEntity<Hold> getHold(@PathVariable String holdId) {
+    public ResponseEntity<Hold> getHold(@PathVariable String holdId,
+                                        @RequestHeader(TRAVELER_ID_HEADER) Integer travelerId) {
         log.info("GET /api/v1/holds/{} - Retrieving hold", holdId);
-        return holdService.getHold(holdId)
+        return holdService.getHold(holdId, travelerId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/holds/{holdId}/confirm")
-    public ResponseEntity<Hold> confirmHold(@PathVariable String holdId) {
+    public ResponseEntity<Hold> confirmHold(@PathVariable String holdId,
+                                            @RequestHeader(TRAVELER_ID_HEADER) Integer travelerId) {
         log.info("POST /api/v1/holds/{}/confirm - Confirming hold", holdId);
         try {
-            Hold hold = holdService.confirmHold(holdId);
+            Hold hold = holdService.confirmHold(holdId, travelerId);
             return ResponseEntity.ok(hold);
         } catch (IllegalArgumentException e) {
             log.error("Hold not found: {}", holdId, e);
@@ -55,10 +60,11 @@ public class HoldController {
     }
 
     @PostMapping("/holds/{holdId}/release")
-    public ResponseEntity<Hold> releaseHold(@PathVariable String holdId) {
+    public ResponseEntity<Hold> releaseHold(@PathVariable String holdId,
+                                            @RequestHeader(TRAVELER_ID_HEADER) Integer travelerId) {
         log.info("POST /api/v1/holds/{}/release - Releasing hold", holdId);
         try {
-            Hold hold = holdService.releaseHold(holdId);
+            Hold hold = holdService.releaseHold(holdId, travelerId);
             return ResponseEntity.ok(hold);
         } catch (IllegalArgumentException e) {
             log.error("Hold not found: {}", holdId, e);

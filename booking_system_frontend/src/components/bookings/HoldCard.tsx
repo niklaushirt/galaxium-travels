@@ -65,7 +65,7 @@ export const HoldCard = ({ storedHold, flight, onAction }: HoldCardProps) => {
     if (!user) return;
     setIsConfirming(true);
     try {
-      const confirmed = await confirmHold(storedHold.holdId);
+      const confirmed = await confirmHold(storedHold.holdId, user.user_id);
       removeHold(user.user_id, storedHold.holdId);
       toast.success(`Booking confirmed! Reference: #${confirmed.externalBookingReference}`);
       onAction();
@@ -80,7 +80,7 @@ export const HoldCard = ({ storedHold, flight, onAction }: HoldCardProps) => {
     if (!user) return;
     setIsReleasing(true);
     try {
-      await releaseHold(storedHold.holdId);
+      await releaseHold(storedHold.holdId, user.user_id);
       removeHold(user.user_id, storedHold.holdId);
       toast.success('Hold released');
       onAction();

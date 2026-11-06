@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.Year;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -64,9 +65,14 @@ public class QuoteService {
         return quote;
     }
 
+    /**
+     * Returns the quote only if it belongs to the given traveler. A quote owned by
+     * someone else is indistinguishable from a missing one to avoid ID enumeration.
+     */
     @Transactional(readOnly = true)
-    public Optional<Quote> getQuote(String quoteId) {
-        return quoteRepository.findById(quoteId);
+    public Optional<Quote> getQuote(String quoteId, Integer travelerId) {
+        return quoteRepository.findById(quoteId)
+                .filter(quote -> Objects.equals(quote.getTravelerId(), travelerId));
     }
 
     private String generateQuoteId() {

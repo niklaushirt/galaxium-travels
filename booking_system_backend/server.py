@@ -1,9 +1,10 @@
 import os
 from contextlib import asynccontextmanager
+from typing import Annotated
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_mcp import FastApiMCP
 from sqlalchemy.orm import Session
@@ -217,6 +218,14 @@ def get_user_endpoint(name: str, email: str, db: Session = Depends(get_db)):
 
 JAVA_SERVICE_URL = os.getenv("JAVA_SERVICE_URL", "http://localhost:8080")
 
+# The Java hold service only returns quotes/holds to the traveler that owns them.
+# The proxy forwards the caller-supplied X-Traveler-Id; it does not authenticate it.
+TravelerId = Annotated[int, Header(description="ID of the traveler that owns the quote/hold")]
+
+
+def _traveler_headers(x_traveler_id: int) -> dict[str, str]:
+    return {"X-Traveler-Id": str(x_traveler_id)}
+
 
 @app.post("/internal/bookings/from-hold", response_model=BookingOut, tags=["Internal"])
 def create_booking_from_hold(hold_data: dict, db: Session = Depends(get_db)):
@@ -256,12 +265,13 @@ async def create_quote(quote_data: dict):
 
 
 @app.get("/quotes/{quote_id}", tags=["Quotes"])
-async def get_quote(quote_id: str):
+async def get_quote(quote_id: str, x_traveler_id: TravelerId):
     """Proxy endpoint to get a quote from the Java hold service."""
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
                 f"{JAVA_SERVICE_URL}/api/v1/quotes/{quote_id}",
+                headers=_traveler_headers(x_traveler_id),
                 timeout=30.0
             )
             response.raise_for_status()
@@ -271,12 +281,13 @@ async def get_quote(quote_id: str):
 
 
 @app.post("/quotes/{quote_id}/holds", tags=["Holds"])
-async def create_hold(quote_id: str):
+async def create_hold(quote_id: str, x_traveler_id: TravelerId):
     """Proxy endpoint to create a hold from a quote in the Java hold service."""
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
                 f"{JAVA_SERVICE_URL}/api/v1/quotes/{quote_id}/holds",
+                headers=_traveler_headers(x_traveler_id),
                 timeout=30.0
             )
             response.raise_for_status()
@@ -286,12 +297,13 @@ async def create_hold(quote_id: str):
 
 
 @app.get("/holds/{hold_id}", tags=["Holds"])
-async def get_hold(hold_id: str):
+async def get_hold(hold_id: str, x_traveler_id: TravelerId):
     """Proxy endpoint to get a hold from the Java hold service."""
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
                 f"{JAVA_SERVICE_URL}/api/v1/holds/{hold_id}",
+                headers=_traveler_headers(x_traveler_id),
                 timeout=30.0
             )
             response.raise_for_status()
@@ -301,12 +313,13 @@ async def get_hold(hold_id: str):
 
 
 @app.post("/holds/{hold_id}/confirm", tags=["Holds"])
-async def confirm_hold(hold_id: str):
+async def confirm_hold(hold_id: str, x_traveler_id: TravelerId):
     """Proxy endpoint to confirm a hold in the Java hold service."""
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
                 f"{JAVA_SERVICE_URL}/api/v1/holds/{hold_id}/confirm",
+                headers=_traveler_headers(x_traveler_id),
                 timeout=30.0
             )
             response.raise_for_status()
@@ -316,12 +329,13 @@ async def confirm_hold(hold_id: str):
 
 
 @app.post("/holds/{hold_id}/release", tags=["Holds"])
-async def release_hold(hold_id: str):
+async def release_hold(hold_id: str, x_traveler_id: TravelerId):
     """Proxy endpoint to release a hold in the Java hold service."""
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
                 f"{JAVA_SERVICE_URL}/api/v1/holds/{hold_id}/release",
+                headers=_traveler_headers(x_traveler_id),
                 timeout=30.0
             )
             response.raise_for_status()

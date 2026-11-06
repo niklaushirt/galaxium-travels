@@ -167,11 +167,11 @@ export const BookingModal = ({ isOpen, onClose, flight, onSuccess }: BookingModa
   };
 
   const handlePlaceHold = async () => {
-    if (!quote) return;
+    if (!quote || !user) return;
 
     setIsLoading(true);
     try {
-      const newHold = await createHold(quote.quoteId);
+      const newHold = await createHold(quote.quoteId, user.user_id);
       setHold(newHold);
       setStep('hold');
 
@@ -200,7 +200,7 @@ export const BookingModal = ({ isOpen, onClose, flight, onSuccess }: BookingModa
 
     setIsLoading(true);
     try {
-      const confirmed = await confirmHold(hold.holdId);
+      const confirmed = await confirmHold(hold.holdId, user.user_id);
       removeHold(user.user_id, hold.holdId);
       toast.success(
         `Booking confirmed! Reference: #${confirmed.externalBookingReference}`
@@ -219,7 +219,7 @@ export const BookingModal = ({ isOpen, onClose, flight, onSuccess }: BookingModa
 
     setIsLoading(true);
     try {
-      await releaseHold(hold.holdId);
+      await releaseHold(hold.holdId, user.user_id);
       removeHold(user.user_id, hold.holdId);
       toast.success('Hold released');
       onClose();
